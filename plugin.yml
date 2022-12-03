@@ -1,0 +1,9 @@
+name: KyzerJnR
+author: JaskerX
+version: 1.0
+main: de.jaskerx.kyzer.jnr.main.Main
+
+commands:
+  jnr:
+    description: Mit diesem Command kannst du das Jump&Run einstellen ('parkour' für Start/Ende, 'display' für Highscore-Display). Nutze dafür einfach deine linke/rechte Maustaste.
+    usage: /jnr [parkour/display]
