@@ -31,17 +31,17 @@ public class PlayerInteractListener implements Listener {
 			if(event.getAction().equals(Action.LEFT_CLICK_BLOCK)) {
 				
 				if(!p.hasPermission("jnr.manage")) {
-					p.sendMessage("Du bist nicht berechtigt, diese Aktion auszuführen!");
+					Main.sendMessage(p, "Du bist nicht berechtigt, diese Aktion auszuführen!", true);
 					return;
 				}
 				
 				if(itemHand.getItemMeta().getDisplayName().equals("JnR tool parkour")) {
 					// start block
 					if(!event.getClickedBlock().getType().equals(Material.STONE_PLATE)) {
-						p.sendMessage("Bitte wähle eine Steindruckplatte aus!");
+						Main.sendMessage(p, "Bitte wähle eine Steindruckplatte aus!", false);
 						return;
 					}
-					event.getClickedBlock().setMetadata("jnr", new FixedMetadataValue(Main.instance, "start"));
+					//event.getClickedBlock().setMetadata("jnr", new FixedMetadataValue(Main.instance, "start"));
 					DbManager.setCoords("start", p.getWorld(), event.getClickedBlock().getX(), event.getClickedBlock().getY(), event.getClickedBlock().getZ(), p);
 					
 				} else if(itemHand.getItemMeta().getDisplayName().equals("JnR tool display")) {
@@ -53,17 +53,17 @@ public class PlayerInteractListener implements Listener {
 			} else if(event.getAction().equals(Action.RIGHT_CLICK_BLOCK) && event.getHand().equals(EquipmentSlot.OFF_HAND)) {
 				
 				if(!p.hasPermission("jnr.manage")) {
-					p.sendMessage("Du bist nicht berechtigt, diese Aktion auszuführen!");
+					Main.sendMessage(p, "Du bist nicht berechtigt, diese Aktion auszuführen!", true);
 					return;
 				}
 				
 				if(itemHand.getItemMeta().getDisplayName().equals("JnR tool parkour")) {
 					// end block
 					if(!event.getClickedBlock().getType().equals(Material.STONE_PLATE)) {
-						p.sendMessage("Bitte wähle eine Steindruckplatte aus!");
+						Main.sendMessage(p, "Bitte wähle eine Steindruckplatte aus!", false);
 						return;
 					}
-					event.getClickedBlock().setMetadata("jnr", new FixedMetadataValue(Main.instance, "end"));
+					//event.getClickedBlock().setMetadata("jnr", new FixedMetadataValue(Main.instance, "end"));
 					DbManager.setCoords("end", p.getWorld(), event.getClickedBlock().getX(), event.getClickedBlock().getY(), event.getClickedBlock().getZ(), p);
 				}
 			}
@@ -72,14 +72,15 @@ public class PlayerInteractListener implements Listener {
 		// pressure plate
 		if(event.getClickedBlock() != null && event.getClickedBlock().hasMetadata("jnr") && event.getAction().equals(Action.PHYSICAL)) {
 			String tag = event.getClickedBlock().getMetadata("jnr").get(0).asString();
-			
+
 			if(tag.equals("start")) {
 				TimesManager.start(p.getUniqueId());
 			} else if(tag.equals("end")) {
 				long time = TimesManager.stop(p);
 				if(time != -1) {
 					String timeInSeconds = String.valueOf((time / 100000) * 0.0001);
-					p.sendMessage("Du hast " + timeInSeconds.substring(0, (timeInSeconds.split("\\.")[1].length() >= 3) ? (timeInSeconds.split("\\.")[0].length() + 1 + 3) : (timeInSeconds.split("\\.")[0].length() + timeInSeconds.split("\\.")[1].length())) + " Sekunden gebraucht.");
+					Main.sendMessage(p, "Du hast " + timeInSeconds.substring(0, (timeInSeconds.split("\\.")[1].length() >= 3) ? (timeInSeconds.split("\\.")[0].length() + 1 + 3) : (timeInSeconds.split("\\.")[0].length() + timeInSeconds.split("\\.")[1].length())) + " Sekunden gebraucht.", false);
+					Main.refreshHighscore();
 				}
 			}
 		}

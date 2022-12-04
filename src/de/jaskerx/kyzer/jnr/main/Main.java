@@ -4,8 +4,10 @@ import java.util.HashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -13,6 +15,7 @@ import de.jaskerx.kyzer.jnr.commands.JnRCommand;
 import de.jaskerx.kyzer.jnr.db.DbManager;
 import de.jaskerx.kyzer.jnr.listeners.PlayerDeathListener;
 import de.jaskerx.kyzer.jnr.listeners.PlayerInteractListener;
+import de.jaskerx.kyzer.jnr.listeners.PlayerJoinListener;
 
 /**
  * @author JaskerX
@@ -20,6 +23,8 @@ import de.jaskerx.kyzer.jnr.listeners.PlayerInteractListener;
  */
 public class Main extends JavaPlugin {
 
+	//TODO: final test + reset
+	
 	public static Main instance;
 	public static ActionBlock blockStart;
 	public static ActionBlock blockEnd;
@@ -33,7 +38,8 @@ public class Main extends JavaPlugin {
 		
 		PluginManager pluginManager = Bukkit.getPluginManager();
 		pluginManager.registerEvents(new PlayerInteractListener(), this);
-		pluginManager.registerEvents(new PlayerDeathListener(), this);
+		//pluginManager.registerEvents(new PlayerDeathListener(), this);
+		//pluginManager.registerEvents(new PlayerJoinListener(), this);
 		
 		DbManager.initDb();
 	}
@@ -45,8 +51,25 @@ public class Main extends JavaPlugin {
 	
 	
 	
+	/**
+	 * Sends a formatted message
+	 * @param sender - The sender the message should be sent to
+	 * @param message - The message that should be sent
+	 * @param error - If the message should be displayed as an error message
+	 */
+	public static void sendMessage(CommandSender sender, String message, boolean error) {
+		String PREFIX = "§8[§9J&R§8] §r";
+		if(error) {
+			sender.sendMessage(PREFIX + "§4" + message);
+		} else {
+			sender.sendMessage(PREFIX + "§7" + message);
+		}
+	}
+	
+	
+	
 	public static void refreshHighscore() {
-		if(blockHigscoreDisplay == null) return;
+		if(blockHigscoreDisplay == null || blockStart == null || blockEnd == null) return;
 		
 		HashMap<String, Long> times = DbManager.getTopTen();
 		removeHighscore();
@@ -61,7 +84,7 @@ public class Main extends JavaPlugin {
 		asTitle.setCustomNameVisible(true);
 		asTitle.setVisible(false);
 		asTitle.setCustomName("Top 10 Highscores:");
-		
+
 		final int[] i = new int[] {1};
 		times.forEach((p, t) -> {
 			loc.setY(loc.getY() - 0.25);
@@ -74,9 +97,11 @@ public class Main extends JavaPlugin {
 			as.setCustomName(i[0] + ". " + p + ": " + t * 0.000000001 + " s");
 			i[0]++;
 		});
-		//TODO: load data from db
 	}
 	
+	/**
+	 * Removes the displayed highscores by killing the ArmorStands at the position of highscore_display
+	 */
 	public static void removeHighscore() {
 		if(blockHigscoreDisplay == null) return;
 		

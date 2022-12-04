@@ -21,7 +21,7 @@ public class TimesManager {
 	
 	/**
 	 * Stops the associated Stopwatch
-	 * @param Player - The player
+	 * @param player - The player
 	 * @return long - The time measured by the associated Stopwatch or -1 if there is no Stopwatch associated with the given player
 	 */
 	public static long stop(Player player) {
