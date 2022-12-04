@@ -41,7 +41,6 @@ public class PlayerInteractListener implements Listener {
 						Main.sendMessage(p, "Bitte wähle eine Steindruckplatte aus!", false);
 						return;
 					}
-					//event.getClickedBlock().setMetadata("jnr", new FixedMetadataValue(Main.instance, "start"));
 					DbManager.setCoords("start", p.getWorld(), event.getClickedBlock().getX(), event.getClickedBlock().getY(), event.getClickedBlock().getZ(), p);
 					
 				} else if(itemHand.getItemMeta().getDisplayName().equals("JnR tool display")) {
@@ -63,7 +62,6 @@ public class PlayerInteractListener implements Listener {
 						Main.sendMessage(p, "Bitte wähle eine Steindruckplatte aus!", false);
 						return;
 					}
-					//event.getClickedBlock().setMetadata("jnr", new FixedMetadataValue(Main.instance, "end"));
 					DbManager.setCoords("end", p.getWorld(), event.getClickedBlock().getX(), event.getClickedBlock().getY(), event.getClickedBlock().getZ(), p);
 				}
 			}
