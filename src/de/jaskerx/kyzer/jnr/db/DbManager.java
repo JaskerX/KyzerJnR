@@ -11,7 +11,6 @@ import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.FixedMetadataValue;
 
@@ -168,7 +167,7 @@ public class DbManager {
 			HashMap<String, Long> times = new HashMap<>();
 			
 			Statement stat = con.createStatement();
-			ResultSet rs = stat.executeQuery("SELECT player_name, highscore_time_nanos FROM highscores WHERE world_uuid_start = '" + Main.blockStart.getWorld().getUID() + "' AND world_name_start = '" + Main.blockStart.getWorld().getName() + "' AND x_start = " + Main.blockStart.getX() + " AND y_start = " + Main.blockStart.getY() + " AND z_start = " + Main.blockStart.getZ() + " AND world_uuid_end = '" + Main.blockEnd.getWorld().getUID() + "' AND world_name_end = '" + Main.blockEnd.getWorld().getName() + "' AND x_end = " + Main.blockEnd.getX() + " AND y_end = " + Main.blockEnd.getY() + " AND z_end = " + Main.blockEnd.getZ() + " ORDER BY highscore_time_nanos DESC LIMIT 10");
+			ResultSet rs = stat.executeQuery("SELECT player_name, highscore_time_nanos FROM highscores WHERE world_uuid_start = '" + Main.blockStart.getWorld().getUID() + "' AND world_name_start = '" + Main.blockStart.getWorld().getName() + "' AND x_start = " + Main.blockStart.getX() + " AND y_start = " + Main.blockStart.getY() + " AND z_start = " + Main.blockStart.getZ() + " AND world_uuid_end = '" + Main.blockEnd.getWorld().getUID() + "' AND world_name_end = '" + Main.blockEnd.getWorld().getName() + "' AND x_end = " + Main.blockEnd.getX() + " AND y_end = " + Main.blockEnd.getY() + " AND z_end = " + Main.blockEnd.getZ() + " ORDER BY highscore_time_nanos ASC LIMIT 10");
 			while(rs.next()) {
 				times.put(rs.getString("player_name"), rs.getLong("highscore_time_nanos"));
 			}

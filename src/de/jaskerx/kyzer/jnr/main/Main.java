@@ -7,23 +7,18 @@ import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import de.jaskerx.kyzer.jnr.commands.JnRCommand;
 import de.jaskerx.kyzer.jnr.db.DbManager;
-import de.jaskerx.kyzer.jnr.listeners.PlayerDeathListener;
 import de.jaskerx.kyzer.jnr.listeners.PlayerInteractListener;
-import de.jaskerx.kyzer.jnr.listeners.PlayerJoinListener;
 
 /**
  * @author JaskerX
  * @version Spigot 1.12.2
  */
 public class Main extends JavaPlugin {
-
-	//TODO: final test + reset
 	
 	public static Main instance;
 	public static ActionBlock blockStart;

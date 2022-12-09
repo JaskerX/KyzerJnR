@@ -8,7 +8,6 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.metadata.FixedMetadataValue;
 
 import de.jaskerx.kyzer.jnr.db.DbManager;
 import de.jaskerx.kyzer.jnr.main.Main;
