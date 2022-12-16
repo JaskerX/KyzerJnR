@@ -63,6 +63,9 @@ public class Main extends JavaPlugin {
 	
 	
 	
+	/**
+	 * refreshs the displayed Highscores by replacing the AmorStands
+	 */
 	public static void refreshHighscore() {
 		if(blockHigscoreDisplay == null || blockStart == null || blockEnd == null) return;
 		
