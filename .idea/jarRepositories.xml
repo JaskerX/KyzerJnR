@@ -41,5 +41,10 @@
       <option name="name" value="maven4" />
       <option name="url" value="https://oss.sonatype.org/content/repositories/central" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="gitlab" />
+      <option name="name" value="gitlab" />
+      <option name="url" value="https://gitlab.com/api/v4/projects/43662301/packages/maven/" />
+    </remote-repository>
   </component>
 </project>
