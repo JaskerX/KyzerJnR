@@ -1,21 +1,22 @@
 package de.jaskerx.kyzer.jnr;
 
 import de.jaskerx.kyzer.jnr.db.Cache;
-import de.jaskerx.kyzer.jnr.db.data.HighscoreData;
-import de.jaskerx.kyzer.jnr.time.TimesManager;
+import de.jaskerx.kyzer.jnr.time.StopwatchRegistry;
+import de.jaskerx.kyzer.jnr.utils.Utils;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.EntityType;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import de.jaskerx.kyzer.jnr.commands.JnRCommand;
-import de.jaskerx.kyzer.jnr.db.DbManager;
 import de.jaskerx.kyzer.jnr.listeners.PlayerInteractListener;
+import org.mariadb.jdbc.Connection;
+import org.mariadb.jdbc.MariaDbDataSource;
 
-import java.util.List;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.Properties;
 
 /**
  * @author JaskerX
@@ -24,103 +25,55 @@ import java.util.List;
 public class KyzerJnR extends JavaPlugin {
 
 	private static KyzerJnR instance;
-	private DbManager db;
+	private MariaDbDataSource dataSource;
+	private Utils utils;
 	private Cache cache;
-	private TimesManager timesManager;
-	
+
 	@Override
 	public void onEnable() {
 		instance = this;
-		db = new DbManager(this);
-		db.init();
-		cache = new Cache(this, db);
-		cache.loadData();
-		timesManager = new TimesManager(this, cache);
+		initDataSource();
 
-		getCommand("jnr").setExecutor(new JnRCommand(this));
+		utils = new Utils(this);
+		cache = new Cache(this, utils, dataSource);
+		cache.loadData();
+		StopwatchRegistry.init(utils, cache);
+
+		getCommand("jnr").setExecutor(new JnRCommand(utils));
 
 		PluginManager pluginManager = Bukkit.getPluginManager();
-		pluginManager.registerEvents(new PlayerInteractListener(this, timesManager, cache), this);
+		pluginManager.registerEvents(new PlayerInteractListener(utils, cache), this);
 	}
-	
-	@Override
-	public void onDisable() {
-		db.close();
-	}
-	
-	
-	
-	/**
-	 * Sends a formatted message
-	 * @param sender The sender the message should be sent to
-	 * @param message The message that should be sent
-	 * @param error If the message should be displayed as an error message
-	 */
-	public void sendMessage(CommandSender sender, String message, boolean error) {
-		String PREFIX = "§8[§9J&R§8] §r";
-		if(error) {
-			sender.sendMessage(PREFIX + "§4" + message);
-		} else {
-			sender.sendMessage(PREFIX + "§7" + message);
+
+
+
+	private void initDataSource() {
+		dataSource = new MariaDbDataSource();
+
+		File dataFolder = getDataFolder();
+		if(!dataFolder.exists()) new File(dataFolder.getAbsolutePath()).mkdir();
+
+		try(FileReader reader = new FileReader(new File(dataFolder, "database.properties"))) {
+			Properties properties = new Properties();
+			properties.load(reader);
+
+			Class.forName("org.mariadb.jdbc.Driver");
+			dataSource.setUrl(properties.getProperty("url"));
+			dataSource.setUser(properties.getProperty("user"));
+			dataSource.setPassword(properties.getProperty("password"));
+
+			try (Connection conn = (Connection) dataSource.getConnection()) {
+				if (!conn.isValid(1000)) {
+					throw new SQLException("Could not establish database connection.");
+				}
+			}
+
+		} catch (SQLException | IOException | ClassNotFoundException e) {
+			e.printStackTrace();
 		}
 	}
-	
-	
-	
-	/**
-	 * refreshs the displayed Highscores by replacing the ArmorStands
-	 */
-	public void refreshHighscore() {
-		if(cache.getBlockHighscoreDisplay() == null || cache.getBlockStart() == null || cache.getBlockEnd() == null) return;
 
-		cache.getTopTen((List<HighscoreData> times) -> Bukkit.getScheduler().runTask(this, () -> {
-			removeHighscore();
 
-			Location loc = cache.getBlockHighscoreDisplay().getBlock().getLocation();
-			loc.setY(loc.getY() + 2.0);
-			loc.setX(loc.getX() + 0.5);
-			loc.setZ(loc.getZ() + 0.5);
-
-			ArmorStand asTitle = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
-			asTitle.setGravity(false);
-			asTitle.setCanPickupItems(false);
-			asTitle.setCustomNameVisible(true);
-			asTitle.setVisible(false);
-			asTitle.setCustomName("§6Top 10 Highscores:");
-
-			final int[] i = new int[]{1};
-			times.forEach(data -> {
-				loc.setY(loc.getY() - 0.25);
-
-				ArmorStand armorStand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
-				armorStand.setGravity(false);
-				armorStand.setCanPickupItems(false);
-				armorStand.setCustomNameVisible(true);
-				armorStand.setVisible(false);
-				String timeFormatted = String.valueOf(data.getTime() * 0.001);
-				armorStand.setCustomName("§a" + i[0] + ". §b" + data.getPlayerName() + ": " + timeFormatted.substring(0, Math.min(timeFormatted.length(), 5)) + " s");
-				i[0]++;
-			});
-		}));
-	}
-	
-	/**
-	 * Removes the displayed highscores by killing the ArmorStands at the position of the display block
-	 */
-	public void removeHighscore() {
-		if(cache.getBlockHighscoreDisplay() == null) return;
-		
-		Location loc = cache.getBlockHighscoreDisplay().getBlock().getLocation();
-		loc.setY(loc.getY() + 2.0);
-		loc.setX(loc.getX() + 0.5);
-		loc.setZ(loc.getZ() + 0.5);
-
-		loc.getWorld().getNearbyEntities(loc, 0, 3, 0).forEach(entity -> {
-			if(entity instanceof ArmorStand) {
-				entity.remove();
-			}
-		});
-	}
 
 	public static KyzerJnR getInstance() {
 		return instance;

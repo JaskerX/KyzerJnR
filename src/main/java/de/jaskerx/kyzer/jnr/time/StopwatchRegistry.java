@@ -4,26 +4,26 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import de.jaskerx.kyzer.jnr.KyzerJnR;
 import de.jaskerx.kyzer.jnr.db.Cache;
+import de.jaskerx.kyzer.jnr.utils.Utils;
 import org.bukkit.entity.Player;
 
-public class TimesManager {
+public class StopwatchRegistry {
 
-	private final KyzerJnR plugin;
-	private final Map<UUID, Stopwatch> times = new HashMap<>();
-	private final Cache cache;
+	private static Utils utils;
+	private static final Map<UUID, Stopwatch> times = new HashMap<>();
+	private static Cache cache;
 
-	public TimesManager(KyzerJnR plugin, Cache cache) {
-		this.plugin = plugin;
-		this.cache = cache;
+	public static void init(Utils utils, Cache cache) {
+		StopwatchRegistry.utils = utils;
+		StopwatchRegistry.cache = cache;
 	}
 	
 	/**
 	 * Puts a started Stopwatch into the HashMap
 	 * @param uuid The players UUID
 	 */
-	public void start(UUID uuid) {
+	public static void start(UUID uuid) {
 		times.put(uuid, new Stopwatch().start());
 	}
 	
@@ -32,16 +32,16 @@ public class TimesManager {
 	 * @param player The player
 	 * @return The time measured by the associated Stopwatch or -1 if there is no Stopwatch associated with the given player
 	 */
-	public long stop(Player player) {
+	public static long stop(Player player) {
 		UUID uuid = player.getUniqueId();
 		if(times.containsKey(uuid)) {
 			long time = times.get(uuid).stop();
 			times.remove(uuid);
 			cache.setHighscore(player, time, rows -> {
 				if (rows == 1 || rows == 2) {
-					plugin.refreshHighscore();
+					utils.refreshHighscore();
 				} else {
-					plugin.sendMessage(player, "Ein Fehler ist aufgetreten!", true);
+					utils.sendMessage(player, "Ein Fehler ist aufgetreten!", true);
 				}
 			});
 			return time;

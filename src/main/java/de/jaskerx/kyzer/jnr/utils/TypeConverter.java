@@ -1,4 +1,4 @@
-package de.jaskerx.kyzer.jnr;
+package de.jaskerx.kyzer.jnr.utils;
 
 import java.nio.ByteBuffer;
 import java.util.UUID;

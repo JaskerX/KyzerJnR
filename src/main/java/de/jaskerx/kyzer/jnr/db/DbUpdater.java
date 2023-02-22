@@ -1,37 +1,38 @@
 package de.jaskerx.kyzer.jnr.db;
 
-import de.jaskerx.kyzer.jnr.ActionBlock;
-import de.jaskerx.kyzer.jnr.KyzerJnR;
-import org.bukkit.Bukkit;
+import de.jaskerx.kyzer.jnr.utils.ActionBlock;
+import de.jaskerx.kyzer.jnr.utils.TypeConverter;
 import org.bukkit.entity.Player;
+import org.mariadb.jdbc.MariaDbDataSource;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.function.IntConsumer;
+import java.util.concurrent.CompletableFuture;
 
 public class DbUpdater {
 
-    private final KyzerJnR plugin;
-    private final DbManager db;
+    private final MariaDbDataSource dataSource;
     private final Cache cache;
+    private final TypeConverter converter;
 
-    public DbUpdater(KyzerJnR plugin, DbManager db, Cache cache) {
-        this.plugin = plugin;
-        this.db = db;
+    public DbUpdater(MariaDbDataSource dataSource, Cache cache) {
+        this.dataSource = dataSource;
         this.cache = cache;
+        converter = new TypeConverter();
     }
 
-    public void updateBlock(ActionBlock block, Player player, IntConsumer consumer) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            byte[] worldUUID = db.getConverter().uuidToByteArray(block.getWorld().getUID());
+
+    public CompletableFuture<Integer> updateBlock(ActionBlock block, Player player) {
+        return CompletableFuture.supplyAsync(() -> {
+            byte[] worldUUID = converter.uuidToByteArray(block.getWorld().getUID());
             String worldName = block.getWorld().getName();
             int x = block.getX();
             int y = block.getY();
             int z = block.getZ();
-            byte[] playerUUID = db.getConverter().uuidToByteArray(player.getUniqueId());
+            byte[] playerUUID = converter.uuidToByteArray(player.getUniqueId());
             String playerName = player.getName();
 
-            try (PreparedStatement statement = db.getConnection().prepareStatement("INSERT INTO coordinates (id, world_uuid, world_name, x, y, z, player_changed_uuid, player_changed_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE world_uuid = ?, world_name = ?, x_old = x, y_old = y, z_old = z, x = ?, y = ?, z = ?, player_changed_uuid = ?, player_changed_name = ?")) {
+            try (PreparedStatement statement = dataSource.getConnection().prepareStatement("INSERT INTO coordinates (id, world_uuid, world_name, x, y, z, player_changed_uuid, player_changed_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE world_uuid = ?, world_name = ?, x_old = x, y_old = y, z_old = z, x = ?, y = ?, z = ?, player_changed_uuid = ?, player_changed_name = ?")) {
                 statement.setString(1, block.getId());
                 statement.setBytes(2, worldUUID);
                 statement.setString(3, worldName);
@@ -48,20 +49,20 @@ public class DbUpdater {
                 statement.setBytes(14, playerUUID);
                 statement.setString(15, playerName);
 
-                int rows = statement.executeUpdate();
-                consumer.accept(rows);
+                return statement.executeUpdate();
 
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+            return -1;
         });
     }
 
-    public void updateHighscore(Player player, long time, IntConsumer consumer) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            byte[] playerUUID = db.getConverter().uuidToByteArray(player.getUniqueId());
+    public CompletableFuture<Integer> updateHighscore(Player player, long time) {
+        return CompletableFuture.supplyAsync(() -> {
+            byte[] playerUUID = converter.uuidToByteArray(player.getUniqueId());
             String playerName = player.getName();
-            byte[] worldUUID = db.getConverter().uuidToByteArray(cache.getBlockStart().getWorld().getUID());
+            byte[] worldUUID = converter.uuidToByteArray(cache.getBlockStart().getWorld().getUID());
             int startX = cache.getBlockStart().getX();
             int startY = cache.getBlockStart().getY();
             int startZ = cache.getBlockStart().getZ();
@@ -69,7 +70,7 @@ public class DbUpdater {
             int endY = cache.getBlockEnd().getY();
             int endZ = cache.getBlockEnd().getZ();
 
-            try (PreparedStatement statementStore = db.getConnection().prepareStatement("INSERT INTO highscores (player_uuid, player_name, highscore_time_millis, world_uuid, start_x, start_y, start_z, end_x, end_y, end_z) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE player_uuid = ?, player_name = ?, highscore_time_millis = ?, world_uuid = ?, start_x = ?, start_y = ?, start_z = ?, end_x = ?, end_y = ?, end_z = ?")) {
+            try (PreparedStatement statementStore = dataSource.getConnection().prepareStatement("INSERT INTO highscores (player_uuid, player_name, highscore_time_millis, world_uuid, start_x, start_y, start_z, end_x, end_y, end_z) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE player_uuid = ?, player_name = ?, highscore_time_millis = ?, world_uuid = ?, start_x = ?, start_y = ?, start_z = ?, end_x = ?, end_y = ?, end_z = ?")) {
                 statementStore.setBytes(1, playerUUID);
                 statementStore.setString(2, playerName);
                 statementStore.setLong(3, time);
@@ -91,12 +92,12 @@ public class DbUpdater {
                 statementStore.setInt(19, endY);
                 statementStore.setInt(20, endZ);
 
-                int rows = statementStore.executeUpdate();
-                consumer.accept(rows);
+                return statementStore.executeUpdate();
 
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+            return -1;
         });
     }
 

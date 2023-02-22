@@ -1,5 +1,6 @@
-package de.jaskerx.kyzer.jnr;
+package de.jaskerx.kyzer.jnr.utils;
 
+import de.jaskerx.kyzer.jnr.KyzerJnR;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.metadata.FixedMetadataValue;

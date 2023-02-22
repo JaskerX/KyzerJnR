@@ -1,6 +1,6 @@
 package de.jaskerx.kyzer.jnr.db.data;
 
-import org.bukkit.Bukkit;
+import de.jaskerx.kyzer.jnr.KyzerJnR;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 
@@ -23,7 +23,7 @@ public class HighscoreData {
         this.playerUUID = playerUUID;
         this.playerName = playerName;
         this.time = time;
-        world = Bukkit.getWorld(worldUUID);
+        world = KyzerJnR.getInstance().getServer().getWorld(worldUUID);
         this.startX = startX;
         this.startY = startY;
         this.startZ = startZ;

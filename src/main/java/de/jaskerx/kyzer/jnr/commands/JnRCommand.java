@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import de.jaskerx.kyzer.jnr.utils.Utils;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -14,35 +15,32 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import de.jaskerx.kyzer.jnr.KyzerJnR;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class JnRCommand implements CommandExecutor, TabCompleter {
 
-	private final KyzerJnR plugin;
+	private final Utils utils;
 	private final List<String> argsOne = new ArrayList<>(Arrays.asList("parkour", "display"));
 
-	public JnRCommand(KyzerJnR plugin) {
-		this.plugin = plugin;
+	public JnRCommand(Utils utils) {
+		this.utils = utils;
 	}
 
 	@Override
 	public boolean onCommand(CommandSender sender, Command command, String name, String[] args) {
 
-		if(!(sender instanceof Player)) {
-			plugin.sendMessage(sender, "Diesen Command können nur Spieler ausführen!", true);
+		if(!(sender instanceof Player player)) {
+			utils.sendMessage(sender, "Diesen Command können nur Spieler ausführen!", true);
 			return true;
 		}
 		if(!sender.hasPermission("jnr.manage")) {
-			plugin.sendMessage(sender, "Du bist nicht berechtigt, diesen Command auszuführen!", true);
+			utils.sendMessage(sender, "Du bist nicht berechtigt, diesen Command auszuführen!", true);
 			return true;
 		}
 		if(args.length < 1) {
 			return false;
 		}
-		
-		Player p = (Player) sender;
-		
+
 		ItemStack item = new ItemStack(Material.STICK);
 		
 		if(argsOne.contains(args[0])) {
@@ -54,8 +52,8 @@ public class JnRCommand implements CommandExecutor, TabCompleter {
 			
 		} else return false;
 		
-		if(p.getInventory().addItem(item).size() > 0) {
-			plugin.sendMessage(p, "Es ist nicht genug Platz in deinem Inventar verfügbar!", true);
+		if(player.getInventory().addItem(item).size() > 0) {
+			utils.sendMessage(player, "Es ist nicht genug Platz in deinem Inventar verfügbar!", true);
 			return true;
 		}
 		

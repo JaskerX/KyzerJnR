@@ -1,71 +1,70 @@
 package de.jaskerx.kyzer.jnr.db;
 
-import de.jaskerx.kyzer.jnr.ActionBlock;
+import de.jaskerx.kyzer.jnr.utils.ActionBlock;
 import de.jaskerx.kyzer.jnr.KyzerJnR;
 import de.jaskerx.kyzer.jnr.db.data.HighscoreData;
-import org.bukkit.Bukkit;
+import de.jaskerx.kyzer.jnr.utils.TypeConverter;
+import de.jaskerx.kyzer.jnr.utils.Utils;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.mariadb.jdbc.MariaDbDataSource;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
 public class Cache {
 
     private final KyzerJnR plugin;
-    private final DbManager db;
+    private final Utils utils;
+    private final MariaDbDataSource dataSource;
     private final DbUpdater dbUpdater;
     private ActionBlock blockStart;
     private ActionBlock blockEnd;
     private ActionBlock blockHighscoreDisplay;
     private List<HighscoreData> highscores;
 
-    public Cache(KyzerJnR plugin, DbManager db) {
+    public Cache(KyzerJnR plugin, Utils utils, MariaDbDataSource dataSource) {
         this.plugin = plugin;
-        this.db = db;
-        dbUpdater = new DbUpdater(plugin, db, this);
+        this.utils = utils;
+        this.dataSource = dataSource;
+        dbUpdater = new DbUpdater(dataSource, this);
     }
 
     public void loadData() {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        CompletableFuture.runAsync(() -> {
+            TypeConverter converter = new TypeConverter();
             try {
-                try (PreparedStatement statement = db.getConnection().prepareStatement("SELECT id, world_uuid, x, y, z FROM coordinates")) {
+                try (PreparedStatement statement = dataSource.getConnection().prepareStatement("SELECT id, world_uuid, x, y, z FROM coordinates")) {
                     ResultSet result = statement.executeQuery();
                     while (result.next()) {
                         String key = result.getString("id");
-                        World world = Bukkit.getWorld(db.getConverter().byteArrayToUUID(result.getBytes("world_uuid")));
+                        World world = plugin.getServer().getWorld(converter.byteArrayToUUID(result.getBytes("world_uuid")));
                         int x = result.getInt("x");
                         int y = result.getInt("y");
                         int z = result.getInt("z");
                         switch (key) {
-                            case "start":
-                                blockStart = new ActionBlock(key, world, x, y, z);
-                                break;
-                            case "end":
-                                blockEnd = new ActionBlock(key, world, x, y, z);
-                                break;
-                            case "highscore_display":
-                                blockHighscoreDisplay = new ActionBlock(key, world, x, y, z);
-                                break;
+                            case "start" -> blockStart = new ActionBlock(key, world, x, y, z);
+                            case "end" -> blockEnd = new ActionBlock(key, world, x, y, z);
+                            case "highscore_display" -> blockHighscoreDisplay = new ActionBlock(key, world, x, y, z);
                         }
                     }
                 }
 
                 highscores = new CopyOnWriteArrayList<>();
-                try (PreparedStatement statement = db.getConnection().prepareStatement("SELECT * FROM highscores")) {
+                try (PreparedStatement statement = dataSource.getConnection().prepareStatement("SELECT player_uuid, player_name, highscore_time_millis, world_uuid, start_x, start_y, start_z, end_x, end_y, end_z FROM highscores")) {
                     ResultSet result = statement.executeQuery();
                     while (result.next()) {
                         highscores.add(new HighscoreData(
-                                db.getConverter().byteArrayToUUID(result.getBytes("player_uuid")),
+                                converter.byteArrayToUUID(result.getBytes("player_uuid")),
                                 result.getString("player_name"),
                                 result.getLong("highscore_time_millis"),
-                                db.getConverter().byteArrayToUUID(result.getBytes("world_uuid")),
+                                converter.byteArrayToUUID(result.getBytes("world_uuid")),
                                 result.getInt("start_x"),
                                 result.getInt("start_y"),
                                 result.getInt("start_z"),
@@ -76,7 +75,8 @@ public class Cache {
                     }
                 }
 
-                plugin.refreshHighscore();
+                utils.setCache(this);
+                utils.refreshHighscore();
                 plugin.getLogger().info("Database has been loaded!");
 
             } catch (SQLException e) {
@@ -87,10 +87,9 @@ public class Cache {
 
     /**
      * Gets the max top 10 players by highscore
-     * @param consumer The consumer to execute when the task is done
      */
-    public void getTopTen(Consumer<List<HighscoreData>> consumer) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+    public CompletableFuture<List<HighscoreData>> getTopTen() {
+        return CompletableFuture.supplyAsync(() -> {
             List<HighscoreData> topTen = new ArrayList<>();
             highscores.sort((data1, data2) -> ((Comparable<Long>) data1.getTime()).compareTo(data2.getTime()));
             int i = 0;
@@ -100,7 +99,7 @@ public class Cache {
                 }
                 i++;
             }
-            consumer.accept(topTen);
+            return topTen;
         });
     }
 
@@ -110,7 +109,7 @@ public class Cache {
      * @param time The players time achieved in the J&R
      */
     public void setHighscore(Player player, long time, IntConsumer consumer) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        CompletableFuture.runAsync(() -> {
             long highscore = 0;
             Optional<HighscoreData> dataOptional = highscores.stream().filter(data -> data.getPlayerUUID().equals(player.getUniqueId())).findFirst();
             HighscoreData data = null;
@@ -121,15 +120,8 @@ public class Cache {
                 }
             }
             if (time < highscore || highscore == 0) {
-                plugin.sendMessage(player, "Glückwunsch, du hast einen neuen persönlichen Highscore erreicht!", false);
-                if (data != null) {
-                    highscores.add(new HighscoreData(data)
-                            .withNewTime(time)
-                            .withNewStart(blockStart.getBlock())
-                            .withNewEnd(blockEnd.getBlock())
-                    );
-                    highscores.remove(data);
-                } else {
+                utils.sendMessage(player, "Glückwunsch, du hast einen neuen persönlichen Highscore erreicht!", false);
+                if (data == null) {
                     highscores.add(new HighscoreData(
                             player.getUniqueId(),
                             player.getName(),
@@ -142,9 +134,16 @@ public class Cache {
                             blockEnd.getY(),
                             blockEnd.getZ()
                     ));
+                } else {
+                    highscores.add(new HighscoreData(data)
+                            .withNewTime(time)
+                            .withNewStart(blockStart.getBlock())
+                            .withNewEnd(blockEnd.getBlock())
+                    );
+                    highscores.remove(data);
                 }
-                plugin.refreshHighscore();
-                dbUpdater.updateHighscore(player, time, consumer);
+                utils.refreshHighscore();
+                dbUpdater.updateHighscore(player, time).thenAcceptAsync(consumer::accept);
             }
         });
     }
@@ -158,7 +157,7 @@ public class Cache {
             consumer.accept(-1);
             return;
         }
-        dbUpdater.updateBlock(blockStart, player, consumer);
+        dbUpdater.updateBlock(blockStart, player).thenAcceptAsync(consumer::accept);
     }
 
     public void setBlockEnd(Block block, Player player, IntConsumer consumer) {
@@ -170,7 +169,7 @@ public class Cache {
             consumer.accept(-1);
             return;
         }
-        dbUpdater.updateBlock(blockEnd, player, consumer);
+        dbUpdater.updateBlock(blockEnd, player).thenAcceptAsync(consumer::accept);
     }
 
     public void setBlockHighscoreDisplay(Block block, Player player, IntConsumer consumer) {
@@ -182,7 +181,7 @@ public class Cache {
             consumer.accept(-1);
             return;
         }
-        dbUpdater.updateBlock(blockHighscoreDisplay, player, consumer);
+        dbUpdater.updateBlock(blockHighscoreDisplay, player).thenAcceptAsync(consumer::accept);
     }
 
     public ActionBlock getBlockStart() {
